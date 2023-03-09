@@ -2,7 +2,6 @@
 # Created by Martijn Kamminga
 # v1.0 on 10/15/2022
 # v1.1 on 01/15/2023
-# v2.0 on 02/06/2023
 # v2.1 on 03/09/2023
 # www.isee2it.nl
 scriptlocation=$(echo -n $PWD)
