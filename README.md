@@ -20,4 +20,4 @@ oscpcmd.sh can be chosen from enumOSCP.sh or as standalone
 
 ###### The information contained in this document is provided to the best of my knowledge and expertise. However, it is highly recommended to double-check the accuracy of the commands before executing them.
 
-##### Reference to OSCP WriteUp: https://www.isee2it.nl/index.php/component/content/article/106-oscp-writeup-by-martijn-kamminga 
+##### Reference to OSCP WriteUp: https://www.isee2it.nl/ethical-hacking/oscp-writeup-by-martijn-kamminga
