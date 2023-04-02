@@ -1810,6 +1810,7 @@ wget https://raw.githubusercontent.com/BloodHoundAD/BloodHound/master/Collectors
 wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Privesc/PowerUp.ps1
 wget https://github.com/r3motecontrol/GhostpackCompiledBinaries/blob/master/SharpUp.exe
 wget https://github.com/r3motecontrol/GhostpackCompiledBinaries/blob/master/Seatbelt.exe
+wget https://github.com/r3motecontrol/Ghostpack-CompiledBinaries/raw/master/Rubeus.exe
 wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1
 wget https://github.com/PowerShellMafia/PowerSploit/raw/master/Recon/Invoke-Portscan.ps1
 wget https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1
