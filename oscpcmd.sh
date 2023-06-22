@@ -1774,7 +1774,7 @@ esac
 
 WebSrvDL() {
 ReconstructVars
-if [ -d $HOME/OSCPShare ];then
+if [ ! -d $HOME/OSCPShare ];then
 	mkdir $HOME/OSCPShare;
 fi
 cd $HOME/OSCPShare
